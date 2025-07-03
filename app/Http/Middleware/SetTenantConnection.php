@@ -19,22 +19,31 @@ class SetTenantConnection
     {
         $branchId = $request->route('branch_id');
         if ($branchId) {
-            $branch = Branch::find($branchId);
+            // Cache the branch lookup for 1 minute to reduce DB hits
+            $branch = cache()->remember("branch_{$branchId}", 60, function () use ($branchId) {
+                return Branch::find($branchId);
+            });
+            
             if (!$branch) {
                 abort(404, 'Branch not found');
             }
-            config([
-                'database.connections.tenant' => [
-                    'driver' => 'mysql',
-                    'host' => '127.0.0.1',
-                    'database' => $branch->db_name,
-                    'username' => env('DB_USERNAME', 'root'),
-                    'password' => env('DB_PASSWORD', ''),
-                    'charset' => 'utf8mb4',
-                    'collation' => 'utf8mb4_unicode_ci',
-                ]
-            ]);
-            DB::purge('tenant');
+
+            // Only reconfigure if the DB name is different
+            $currentDb = config('database.connections.tenant.database');
+            if ($currentDb !== $branch->db_name) {
+                config([
+                    'database.connections.tenant' => [
+                        'driver' => 'mysql',
+                        'host' => '127.0.0.1',
+                        'database' => $branch->db_name,
+                        'username' => env('DB_USERNAME', 'root'),
+                        'password' => env('DB_PASSWORD', ''),
+                        'charset' => 'utf8mb4',
+                        'collation' => 'utf8mb4_unicode_ci',
+                    ]
+                ]);
+                DB::purge('tenant');
+            }
             DB::setDefaultConnection('tenant');
         }
         return $next($request);
