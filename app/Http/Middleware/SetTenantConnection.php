@@ -25,7 +25,12 @@ class SetTenantConnection
             });
             
             if (!$branch) {
-                abort(404, 'Branch not found');
+                return response()->json(
+                    [
+                        'message' => 'Branch not found',
+                    ],
+                    404
+                );
             }
 
             // Only reconfigure if the DB name is different

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('branches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
-            $table->string('name');
+            $table->string('name')->unique();
             $table->string('db_name');
             $table->string('db_username');
             $table->string('db_password');
